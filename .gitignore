@@ -17,4 +17,5 @@ monitoring/grafana/data/
 # Dotenv file
 .env
 
+logs
 note.md
