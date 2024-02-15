@@ -2,9 +2,7 @@ use crate::types::{Collector, CollectorStream};
 use anyhow::Result;
 use async_trait::async_trait;
 use ethers::{
-    prelude::Middleware,
-    providers::PubsubClient,
-    types::{H256, U64},
+    core::k256::elliptic_curve::rand_core::block, prelude::Middleware, providers::PubsubClient, types::{Bytes, H256, U256, U64}
 };
 use std::sync::Arc;
 use tokio_stream::StreamExt;
@@ -20,6 +18,10 @@ pub struct BlockCollector<M> {
 pub struct NewBlock {
     pub hash: H256,
     pub number: U64,
+    pub gas_used: U256,
+    pub timestamp: U256,
+    pub extra_data: Bytes,
+    pub base_fee_per_gas: U256,
 }
 
 impl<M> BlockCollector<M> {
@@ -40,7 +42,15 @@ where
     async fn get_event_stream(&self) -> Result<CollectorStream<'_, NewBlock>> {
         let stream = self.provider.subscribe_blocks().await?;
         let stream = stream.filter_map(|block| match block.hash {
-            Some(hash) => block.number.map(|number| NewBlock { hash, number }),
+            // Some(hash) => block.number.map(|number| NewBlock { hash, number }),
+            Some(hash) => {
+                let gas_used = block.gas_used;
+                let timestamp = block.timestamp;
+                let extra_data = block.extra_data;
+                let base_fee_per_gas = block.base_fee_per_gas;
+
+                block.number.map(|number| NewBlock { hash, number, gas_used, timestamp, extra_data, base_fee_per_gas})
+            }
             None => None,
         });
         Ok(Box::pin(stream))
